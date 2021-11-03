@@ -1,0 +1,180 @@
+<html>
+<head>
+  <title>AMI - Lesson 02</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style id="compiled-css" type="text/css">
+      body{
+  font-family: source-code-pro, sans-serif;
+  color:#F9F9F9;
+  background-color: #212121
+}
+#container {
+  background-color: #000;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow:hidden;
+}
+#my-gui-container {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index:1;
+}
+    
+  </style>
+</head>
+<body>
+    <div id="my-gui-container"></div>
+<div id="container"></div>
+<!-- Tools -->
+<script src="https://use.edgefonts.net/source-code-pro.js"></script>
+<script type="text/javascript" src="https://cdn.rawgit.com/dataarts/dat.gui/master/build/dat.gui.min.js"></script>
+<script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/stats.js/master/build/stats.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/6.16.0/polyfill.min.js"></script>
+<!-- THREEJS -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
+<script type="text/javascript"  src="https://rawgit.com/FNNDSC/ami/dev/src/loaders/loaders.trk.js"></script>
+<!-- AMI CDN -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ami.js//0.0.20/ami.min.js"></script>
+<!-- ANALYTICS -->
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-39303022-3', 'auto');
+  var page = '/ami/lessons/02';
+  ga('send', 'pageview', page);
+</script>
+    <script type='text/javascript'>
+/* globals AMI*/
+// VJS classes we will be using in this lesson
+var LoadersVolume = AMI.default.Loaders.Volume;
+var ControlsTrackball = AMI.default.Controls.Trackball;
+var HelpersStack = AMI.default.Helpers.Stack;
+// Setup renderer
+var container = document.getElementById('container');
+var renderer = new THREE.WebGLRenderer({
+    antialias: true,
+  });
+renderer.setSize(container.offsetWidth, container.offsetHeight);
+renderer.setClearColor(0x353535, 1);
+renderer.setPixelRatio(window.devicePixelRatio);
+container.appendChild(renderer.domElement);
+// Setup scene
+var scene = new THREE.Scene();
+// Setup camera
+var camera = new THREE.PerspectiveCamera(
+  45, container.offsetWidth / container.offsetHeight, 0.01, 10000000);
+camera.position.x = 150;
+camera.position.y = 150;
+camera.position.z = 100;
+// Setup controls
+var controls = new ControlsTrackball(camera, container);
+/**
+ * Handle window resize
+ */
+function onWindowResize() {
+  camera.aspect = container.offsetWidth / container.offsetHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.offsetWidth, container.offsetHeight);
+}
+window.addEventListener('resize', onWindowResize, false);
+// Setup loader
+var loader = new LoadersVolume(container);
+var files = ['https://cdn.rawgit.com/aalises/ami-viewerData/d737ab97/T1strip.nii.gz'];
+loader.load(files)
+.then(function() {
+    // merge files into clean series/stack/frame structure
+    var series = loader.data[0].mergeSeries(loader.data);
+    loader.free();
+    loader = null;
+    console.log(series[0].stack[0]);
+    // be carefull that series and target stack exist!
+    var stackHelper = new HelpersStack(series[0].stack[0]);
+    stackHelper.border.color = 0xFFEB3B;
+    gui(stackHelper);
+    scene.add(stackHelper);
+    // center camera and interactor to center of bouding box
+    // for nicer experience
+    var centerLPS = stackHelper.stack.worldCenter();
+    camera.lookAt(centerLPS.x, centerLPS.y, centerLPS.z);
+    camera.updateProjectionMatrix();
+    controls.target.set(centerLPS.x, centerLPS.y, centerLPS.z);
+    // Load TRK model
+    var loaderTRK = new THREE.TRKLoader();
+    loaderTRK.load('https://cdn.rawgit.com/aalises/ami-viewerData/d737ab97/streamline_downsampled_final.trk', function(trks) {
+      var material = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
+      console.log(trks.length);
+            var bufferGeometry = new THREE.BufferGeometry();
+// create a simple square shape. We duplicate the top left and bottom right
+// vertices because each vertex needs to appear once per triangle.
+var vertices = [];
+var colors = [];
+      for(var i = 0; i<trks.length; i++) {
+      console.log(trks[i]);
+            console.log(trks[i].geometry);
+for(var j=0; j<trks[i].geometry.vertices.length; j++) {
+  vertices.push(trks[i].geometry.vertices[j].x);
+  vertices.push(trks[i].geometry.vertices[j].y);
+  vertices.push(trks[i].geometry.vertices[j].z);
+  colors.push(trks[i].geometry.colors[j].r);
+  colors.push(trks[i].geometry.colors[j].g);
+  colors.push(trks[i].geometry.colors[j].b);
+  if(j > 0 && j<trks[i].geometry.vertices.length - 1) {
+    vertices.push(trks[i].geometry.vertices[j].x);
+    vertices.push(trks[i].geometry.vertices[j].y);
+    vertices.push(trks[i].geometry.vertices[j].z);
+    colors.push(trks[i].geometry.colors[j].r);
+    colors.push(trks[i].geometry.colors[j].g);
+    colors.push(trks[i].geometry.colors[j].b);
+  }
+}
+      }
+      var fvertices = new Float32Array(vertices);
+var fcolors = new Float32Array(colors);
+// itemSize = 3 because there are 3 values (components) per vertex
+bufferGeometry.addAttribute( 'position', new THREE.BufferAttribute( fvertices, 3 ) );
+bufferGeometry.addAttribute( 'color', new THREE.BufferAttribute( fcolors, 3 ) );
+        var line = new THREE.LineSegments( bufferGeometry, material);
+        line.applyMatrix(series[0].stack[0].ijk2LPS);
+       scene.add( line );
+});
+})
+.catch(function(error) {
+    window.console.log('oops... something went wrong...');
+    window.console.log(error);
+});
+function gui(stackHelper) {
+  var stack = stackHelper.stack;
+  var gui = new dat.GUI({
+      autoPlace: false,
+  });
+  var customContainer = document.getElementById('my-gui-container');
+  customContainer.appendChild(gui.domElement);
+  // stack
+  var stackFolder = gui.addFolder('Stack');
+  // index range depends on stackHelper orientation.
+  var index = stackFolder.add(
+    stackHelper, 'index', 0, stack.dimensionsIJK.z - 1).step(1).listen();
+    }
+/**
+ * Start animation loop
+ */
+function animate() {
+    controls.update();
+    renderer.render(scene, camera);
+    // request new frame
+    requestAnimationFrame(function() {
+      animate();
+    });
+  }
+animate();
+  </script>
+</body>
+</html>
